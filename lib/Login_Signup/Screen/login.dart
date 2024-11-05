@@ -1,124 +1,152 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:watchwiz/Login_Signup/Screen/home_screen.dart';
-import 'package:watchwiz/Login_Signup/Screen/sign_up.dart';
-import 'package:watchwiz/Login_Signup/Services/authentication.dart';
-import 'package:watchwiz/Login_Signup/Widget/button.dart';
-import 'package:watchwiz/Login_Signup/Widget/snack_bar.dart';
-import 'package:watchwiz/Login_Signup/Widget/text_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _SignupScreenState();
+  // ignore: library_private_types_in_public_api
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _SignupScreenState extends State<LoginScreen> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  bool isLoading = false;
+class _LoginScreenState extends State<LoginScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
 
-  @override
-  void dispose() {
-    super.dispose();
-    emailController.dispose();
-    passwordController.dispose();
-  }
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-  void loginUsers() async {
-    String res = await AuthServices().loginUser(
-      email: emailController.text,
-      password: passwordController.text,
-    );
-
-    if (res == "sucess") {
-      setState(() {
-        isLoading = true;
-      });
-      // ignore: use_build_context_synchronously
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const HomeScreen(),
-        ),
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
-    } else {
-      setState(() {
-        isLoading = false;
-      });
+
+      Navigator.pushReplacement(
+        // ignore: use_build_context_synchronously
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
       // ignore: use_build_context_synchronously
-      showSnackBar(context, res);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Error al iniciar sesión')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    double height = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: Colors.black,
-      
-      body: SafeArea(
+      body: Center(
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                width: double.infinity,
-                height: height / 2.7,
-                child: Image.asset("/assets/images/Logo copy.png"),
-              ),
-              TextFieldInpute(
-                textEditingController: emailController,
-                hintText: "Ingresa tu correo electrónico",
-                icon: Icons.email,
-              ),
-              TextFieldInpute(
-                isPass: true,
-                textEditingController: passwordController,
-                hintText: "Ingresa tu contraseña",
-                icon: Icons.lock,
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 35),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    "Olvidaste tu contraseña?",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.blue,
+              // Logo en la parte superior
+              Image.asset('assets/images/Logo.png', width: 350),
+              const SizedBox(height: 15),
+
+              // Tarjeta para el formulario de inicio de sesión con los textos dentro
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                child: Card(
+                  color: Colors.grey[850],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Bienvenido a WatchWiz",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "INICIO DE SESIÓN",
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: _emailController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: "E-mail",
+                            labelStyle: TextStyle(color: Colors.white70),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white54),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.blue),
+                            ),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 50),
+                        TextField(
+                          controller: _passwordController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: "Contraseña",
+                            labelStyle: TextStyle(color: Colors.white70),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.white54),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.blue),
+                            ),
+                            suffixIcon: Icon(
+                              Icons.visibility,
+                              color: Colors.white54,
+                            ),
+                          ),
+                          obscureText: false,
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-              MyButton(onTab: loginUsers, text: "Inicia Sesión"),
-              SizedBox(height: height / 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "No tienes cuenta?",
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SignUpScreen(),
+
+              const SizedBox(height: 40),
+
+              // Botón de inicio de sesión
+              _isLoading
+                  ? const CircularProgressIndicator(color: Colors.blue)
+                  : ElevatedButton(
+                      onPressed: _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      "Registrate",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 80, vertical: 15),
+                      ),
+                      child: const Text(
+                        "INICIAR SESIÓN",
+                        style: TextStyle(fontSize: 16, color: Colors.black),
                       ),
                     ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
