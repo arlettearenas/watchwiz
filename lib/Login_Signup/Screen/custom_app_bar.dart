@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
+import 'package:watchwiz/Login_Signup/Screen/tablebasic.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomAppBar({super.key});
@@ -9,12 +10,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.black,
-      title: Text("Bienvenido"),
       actions: [
         IconButton(
           color: Colors.white,
           icon: Icon(Icons.calendar_today),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => TableBasicsExample()),
+            );
+          },
         ),
         IconButton(
           color: Colors.white,

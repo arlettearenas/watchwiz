@@ -30,7 +30,8 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
         BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Trabajos'),
-        BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Compras'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart), label: 'Compras'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
       ],
     );
