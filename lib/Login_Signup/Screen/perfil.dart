@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:watchwiz/Login_Signup/Screen/custom_app_bar.dart';
+import 'package:watchwiz/Login_Signup/Screen/custom_bottom_nav.dart';
+import 'package:watchwiz/Login_Signup/Screen/login.dart';
+import 'package:watchwiz/Login_Signup/Services/authentication.dart';
+import 'package:watchwiz/Login_Signup/Widget/button.dart';
 
 class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});
@@ -6,11 +11,35 @@ class PerfilScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Perfil'),
-      ),
-      body: const Center(
-        child: Text('Página de perfil'),
+      appBar: const CustomAppBar(), // Llama al AppBar personalizado
+      bottomNavigationBar:
+          const CustomBottomNav(), // Barra de navegación inferior personalizada
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Página de perfil',
+              style: TextStyle(
+                color: Colors.white, // Establece el color del texto a blanco
+              ),
+            ),
+            const SizedBox(height: 20), // Espacio entre el texto y el botón
+            MyButton(
+              onTab: () async {
+                await AuthServices().signOut();
+                // ignore: use_build_context_synchronously
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => const LoginScreen(),
+                  ),
+                );
+              },
+              text: "Cerrar Sesión",
+            ),
+          ],
+        ),
       ),
     );
   }

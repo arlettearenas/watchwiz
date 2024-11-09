@@ -1,16 +1,26 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
+import 'package:watchwiz/Login_Signup/Screen/custom_app_bar.dart';
+import 'package:watchwiz/Login_Signup/Screen/custom_bottom_nav.dart';
 
 class ComprasScreen extends StatelessWidget {
   const ComprasScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Trabajos'),
-      ),
-      body: const Center(
-        child: Text('Página de Trabajos'),
+    return const Scaffold(
+      appBar: CustomAppBar(), // Llama al AppBar personalizado
+      bottomNavigationBar:
+          CustomBottomNav(), // Barra de navegación inferior personalizada
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Text(
+          'Página de compras',
+          style: TextStyle(
+            color: Colors.white, // Establece el color del texto a blanco
+          ),
+        ),
       ),
     );
   }

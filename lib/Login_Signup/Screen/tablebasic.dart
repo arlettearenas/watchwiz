@@ -1,62 +1,124 @@
-// Copyright 2019 Aleksander Woźniak
-// SPDX-License-Identifier: Apache-2.0
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:watchwiz/Login_Signup/Screen/custom_app_bar.dart';
 import 'package:watchwiz/Login_Signup/Screen/custom_bottom_nav.dart';
-import 'package:watchwiz/Login_Signup/Screen/utils.dart';
 
 class TableBasicsExample extends StatefulWidget {
+  const TableBasicsExample({super.key});
+
   @override
+  // ignore: library_private_types_in_public_api
   _TableBasicsExampleState createState() => _TableBasicsExampleState();
 }
 
 class _TableBasicsExampleState extends State<TableBasicsExample> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
+  DateTime _selectedDay = DateTime.now();
+  List _trabajos = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents(_selectedDay); // Carga los eventos del día actual
+  }
+
+  void _loadEvents(DateTime date) async {
+    // Formatea la fecha para Firestore
+    String dateKey = "${date.year}-${date.month}-${date.day}";
+
+    // Obtiene los eventos de Firestore para la fecha seleccionada
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('trabajos')
+        .where('date', isEqualTo: dateKey)
+        .get();
+
+    setState(() {
+      _trabajos = snapshot.docs.map((doc) => doc.data()).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: const CustomAppBar(), // Llama al AppBar personalizado
+      bottomNavigationBar:
+          const CustomBottomNav(), // Barra de navegación inferior personalizada
       backgroundColor: Colors.black,
-      appBar: const CustomAppBar(),
-      bottomNavigationBar: const CustomBottomNav(),
-      body: TableCalendar(
-        firstDay: kFirstDay,
-        lastDay: kLastDay,
-        focusedDay: _focusedDay,
-        calendarFormat: _calendarFormat,
-        selectedDayPredicate: (day) {
-          // Use `selectedDayPredicate` to determine which day is currently selected.
-          // If this returns true, then `day` will be marked as selected.
-
-          // Using `isSameDay` is recommended to disregard
-          // the time-part of compared DateTime objects.
-          return isSameDay(_selectedDay, day);
-        },
-        onDaySelected: (selectedDay, focusedDay) {
-          if (!isSameDay(_selectedDay, selectedDay)) {
-            // Call `setState()` when updating the selected day
-            setState(() {
-              _selectedDay = selectedDay;
-              _focusedDay = focusedDay;
-            });
-          }
-        },
-        onFormatChanged: (format) {
-          if (_calendarFormat != format) {
-            // Call `setState()` when updating calendar format
-            setState(() {
-              _calendarFormat = format;
-            });
-          }
-        },
-        onPageChanged: (focusedDay) {
-          // No need to call `setState()` here
-          _focusedDay = focusedDay;
-        },
+      body: Column(
+        children: [
+          TableCalendar(
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: _selectedDay,
+            calendarFormat: _calendarFormat,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+              });
+              _loadEvents(
+                  selectedDay); // Carga eventos para el día seleccionado
+            },
+            onFormatChanged: (format) {
+              setState(() {
+                _calendarFormat = format;
+              });
+            },
+            calendarStyle: const CalendarStyle(
+              selectedDecoration: BoxDecoration(
+                color: Colors.blue,
+                shape: BoxShape.circle,
+              ),
+              todayDecoration: BoxDecoration(
+                color: Colors.orange,
+                shape: BoxShape.circle,
+              ),
+              outsideDaysVisible: false,
+              weekendTextStyle: TextStyle(color: Colors.red),
+              defaultTextStyle: TextStyle(color: Colors.white),
+            ),
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleTextStyle: TextStyle(color: Colors.white),
+              leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
+              rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: _trabajos.isEmpty
+                ? const Center(
+                    child: Text(
+                      "No hay trabajos para este día",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _trabajos.length,
+                    itemBuilder: (context, index) {
+                      var event = _trabajos[index];
+                      return Card(
+                        color: Colors.grey[800],
+                        child: ListTile(
+                          title: Text(
+                            event['client_name'] ?? 'Nombre no especificado',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          subtitle: Text(
+                            event['description'] ?? 'Sin descripción',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          trailing: Text(
+                            event['phone_number'] ?? 'Número no especificado',
+                            style: const TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          )
+        ],
       ),
     );
   }
