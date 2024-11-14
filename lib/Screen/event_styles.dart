@@ -20,7 +20,7 @@ InputDecoration textFieldDecoration(String label, IconData icon) {
       borderRadius: BorderRadius.circular(8),
     ),
     focusedBorder: OutlineInputBorder(
-      borderSide: const BorderSide(color: Colors.lightGreen, width: 2),
+      borderSide: const BorderSide(color: Color.fromARGB(255, 74, 78, 195), width: 2),
       borderRadius: BorderRadius.circular(8),
     ),
   );

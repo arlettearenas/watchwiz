@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../Services/event_controller.dart';
-import 'add_event_styles.dart';
+import 'event_styles.dart';
 
 class AddEventScreen extends StatefulWidget {
   const AddEventScreen({super.key});
