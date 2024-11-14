@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:watchwiz/Login_Signup/Screen/add_event.dart';
-import 'package:watchwiz/Login_Signup/Screen/custom_app_bar.dart';
-import 'package:watchwiz/Login_Signup/Screen/custom_bottom_nav.dart';
+import 'package:watchwiz/Screen/add_event.dart';
+import 'package:watchwiz/Screen/custom_app_bar.dart';
+import 'package:watchwiz/Screen/custom_bottom_nav.dart';
 
 class TableBasicsExample extends StatefulWidget {
   const TableBasicsExample({super.key});

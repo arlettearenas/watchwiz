@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:watchwiz/Login_Signup/Screen/custom_app_bar.dart';
-import 'package:watchwiz/Login_Signup/Screen/custom_bottom_nav.dart';
-import 'package:watchwiz/Login_Signup/Screen/login.dart';
-import 'package:watchwiz/Login_Signup/Services/authentication.dart';
-import 'package:watchwiz/Login_Signup/Widget/button.dart';
+import 'package:watchwiz/Screen/custom_app_bar.dart';
+import 'package:watchwiz/Screen/custom_bottom_nav.dart';
+import 'package:watchwiz/Screen/login.dart';
+import 'package:watchwiz/Services/authentication.dart';
+import 'package:watchwiz/Widget/button.dart';
 
 class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});

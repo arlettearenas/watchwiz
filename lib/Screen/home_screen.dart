@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'custom_app_bar.dart';
 import 'custom_bottom_nav.dart';
+import 'search_bar.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -9,23 +10,16 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      appBar: CustomAppBar(), // Llama al AppBar personalizado
-      bottomNavigationBar:
-          CustomBottomNav(), // Barra de navegación inferior personalizada
+      appBar: CustomAppBar(),
+      bottomNavigationBar: CustomBottomNav(),
       backgroundColor: Colors.black,
       body: Column(
         children: [
           SizedBox(height: 20),
-          Text(
-            "Bienvenido a WatchWiz",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 25,
-            ),
-          ),
+          // Llamada al buscador personalizado
+          CustomSearchBar(),
           SizedBox(height: 20),
+          // Aquí puedes agregar más contenido si es necesario
         ],
       ),
     );

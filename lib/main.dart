@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:watchwiz/Login_Signup/Screen/home_screen.dart';
-import 'package:watchwiz/Login_Signup/Screen/login.dart';
+import 'package:watchwiz/Screen/home_screen.dart';
+import 'package:watchwiz/Screen/login.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

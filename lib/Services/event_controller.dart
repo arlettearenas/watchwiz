@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-class AddEventController {
+class EventController {
   final TextEditingController clientNameController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController phoneNumberController = TextEditingController();
@@ -70,5 +70,53 @@ class AddEventController {
     });
 
     Navigator.pop(context);
+  }
+
+  // Borrar un evento
+  Future<void> deleteEvent(String documentId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('trabajos')
+          .doc(documentId)
+          .delete();
+    } catch (e) {
+      print("Error al eliminar el evento: $e");
+    }
+  }
+
+  // Editar un evento
+  Future<void> updateEvent(String documentId, BuildContext context) async {
+    if (clientNameController.text.isEmpty || selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('El nombre del cliente y la fecha son obligatorios')),
+      );
+      return;
+    }
+
+    String formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
+    int serviceCost = int.tryParse(serviceCostController.text) ?? 0;
+    int advance = int.tryParse(advanceController.text) ?? 0;
+    int remaining = serviceCost - advance;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('trabajos')
+          .doc(documentId)
+          .update({
+        'client_name': clientNameController.text,
+        'description': descriptionController.text,
+        'phone_number': phoneNumberController.text,
+        'service_cost': serviceCost,
+        'advance': advance,
+        'remaining': remaining,
+        'photo': selectedImage?.path ?? '',
+        'date': formattedDate,
+      });
+
+      Navigator.pop(context);
+    } catch (e) {
+      print("Error al actualizar el evento: $e");
+    }
   }
 }

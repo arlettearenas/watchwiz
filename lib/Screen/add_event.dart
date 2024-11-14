@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'add_event_controller.dart';
+import '../Services/event_controller.dart';
 import 'add_event_styles.dart';
 
 class AddEventScreen extends StatefulWidget {
@@ -13,7 +13,7 @@ class AddEventScreen extends StatefulWidget {
 }
 
 class _AddEventScreenState extends State<AddEventScreen> {
-  final AddEventController _controller = AddEventController();
+  final EventController _controller = EventController();
 
   @override
   void initState() {

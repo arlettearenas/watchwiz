@@ -1,9 +1,9 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
-import 'package:watchwiz/Login_Signup/Screen/compras.dart';
-import 'package:watchwiz/Login_Signup/Screen/perfil.dart';
-import 'package:watchwiz/Login_Signup/Screen/trabajos.dart';
+import 'package:watchwiz/Screen/compras.dart';
+import 'package:watchwiz/Screen/perfil.dart';
+import 'package:watchwiz/Screen/trabajos.dart';
 
 import 'home_screen.dart';
 
