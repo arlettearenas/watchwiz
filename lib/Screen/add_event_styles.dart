@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 final darkBackground = Colors.grey[900];
 final elevatedButtonStyle = ElevatedButton.styleFrom(
-  foregroundColor: Colors.white,
-  backgroundColor: const Color.fromARGB(255, 162, 204, 247),
+  foregroundColor: const Color.fromARGB(255, 18, 17, 17),
+  backgroundColor: const Color.fromARGB(255, 22, 114, 207),
   padding: const EdgeInsets.symmetric(horizontal: 16),
   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
 );
@@ -20,7 +20,7 @@ InputDecoration textFieldDecoration(String label, IconData icon) {
       borderRadius: BorderRadius.circular(8),
     ),
     focusedBorder: OutlineInputBorder(
-      borderSide: const BorderSide(color: Colors.lightGreen, width: 2),
+      borderSide: const BorderSide(color: Colors.lightBlue, width: 2),
       borderRadius: BorderRadius.circular(8),
     ),
   );
