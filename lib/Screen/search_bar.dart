@@ -24,7 +24,7 @@ class CustomSearchBar extends StatelessWidget {
         child: TextField(
           decoration: const InputDecoration(
             prefixIcon: Icon(Icons.search, color: Colors.black54),
-            hintText: "Busca lo que desees",
+            hintText: "Buscador",
             hintStyle: TextStyle(color: Colors.black54),
             border: InputBorder.none,
             contentPadding: EdgeInsets.symmetric(vertical: 15),
