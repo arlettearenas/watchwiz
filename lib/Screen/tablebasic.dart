@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:watchwiz/Screen/add_event.dart';
 import 'package:watchwiz/Screen/custom_app_bar.dart';
 import 'package:watchwiz/Screen/custom_bottom_nav.dart';
 
@@ -21,6 +22,30 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
   void initState() {
     super.initState();
     _loadEvents(_selectedDay); // Carga los eventos del día actual
+  }
+
+  void _showAddEventModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20), // Bordes redondeados
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8, // Ajusta el ancho
+            height:
+                MediaQuery.of(context).size.height * 0.7, // Ajusta la altura
+            padding: const EdgeInsets.all(5.0),
+            decoration: BoxDecoration(
+              color: Colors.grey[900], // Color de fondo
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const AddEventScreen(), // Tu contenido
+          ),
+        );
+      },
+    );
   }
 
   void _loadEvents(DateTime date) async {
@@ -119,6 +144,14 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                   ),
           )
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Abre AddEventScreen como un modal en lugar de una nueva pantalla
+          _showAddEventModal(context);
+        },
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add),
       ),
     );
   }
