@@ -31,63 +31,72 @@ class _AddEventScreenState extends State<AddEventScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTextField(_controller.clientNameController,
-                  'Nombre del Cliente', Icons.person),
+              _buildTextLabel('Nombre del Cliente'),
+              _buildTextField(_controller.clientNameController),
               const SizedBox(height: 15),
-              _buildTextField(_controller.descriptionController, 'Descripción',
-                  Icons.description),
+              _buildTextLabel('Descripción'),
+              _buildTextField(_controller.descriptionController),
               const SizedBox(height: 15),
-              _buildTextField(_controller.phoneNumberController,
-                  'Número de Teléfono', Icons.phone, TextInputType.phone),
-              const SizedBox(height: 15),
+              _buildTextLabel('Número de Teléfono'),
               _buildTextField(
-                  _controller.serviceCostController,
-                  'Costo del Servicio',
-                  Icons.monetization_on,
-                  TextInputType.number),
+                  _controller.phoneNumberController, TextInputType.phone),
               const SizedBox(height: 15),
-              _buildTextField(_controller.advanceController, 'Adelanto',
-                  Icons.payment, TextInputType.number),
+              _buildTextLabel('Costo del Servicio'),
+              _buildTextField(
+                  _controller.serviceCostController, TextInputType.number),
+              const SizedBox(height: 15),
+              _buildTextLabel('Adelanto'),
+              _buildTextField(
+                  _controller.advanceController, TextInputType.number),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: () async {
-                      await _controller.pickImage();
-                      setState(() {}); // Actualiza la imagen seleccionada
-                    },
-                    style: elevatedButtonStyle,
-                    child: const Icon(Icons.image, size: 50),
-                  ),
-                ],
+              const Text(
+                "Foto de la reparación:",
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await _controller.pickImage();
+                    setState(() {}); // Actualiza la imagen seleccionada
+                  },
+                  style: elevatedButtonStyle,
+                  child: const Icon(Icons.image, color: Colors.white, size: 50),
+                ),
               ),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Text(
-                    _controller.selectedDate == null
-                        ? ''
-                        : DateFormat('yyyy-MM-dd')
-                            .format(_controller.selectedDate!),
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () async {
-                      await _controller.selectDate(context);
-                      setState(() {}); // Actualiza la fecha seleccionada
-                    },
-                    style: elevatedButtonStyle,
-                    child: const Text('Seleccionar fecha'),
-                  ),
-                ],
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _controller.selectedDate == null
+                          ? ''
+                          : DateFormat('yyyy-MM-dd')
+                              .format(_controller.selectedDate!),
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await _controller.selectDate(context);
+                        setState(() {}); // Actualiza la fecha seleccionada
+                      },
+                      style: elevatedButtonStyle,
+                      child: const Text('Fecha',
+                          style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               Center(
                 child: ElevatedButton(
                   onPressed: () => _controller.saveEvent(context),
                   style: elevatedButtonStyle,
-                  child: const Text('Crear'),
+                  child: const Text('Crear',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ),
             ],
@@ -97,18 +106,24 @@ class _AddEventScreenState extends State<AddEventScreen> {
     );
   }
 
+  // Widget para construir etiquetas de texto con estilo uniforme
+  Widget _buildTextLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    );
+  }
+
   // Widget para construir campos de texto personalizados
   Widget _buildTextField(
-    TextEditingController controller,
-    String label,
-    IconData icon, [
+    TextEditingController controller, [
     TextInputType keyboardType = TextInputType.text,
   ]) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white),
-      decoration: textFieldDecoration(label, icon),
+      decoration: textFieldDecoration(''), // Elimina label en el decorador
     );
   }
 }
