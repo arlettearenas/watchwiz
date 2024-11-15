@@ -1,7 +1,9 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:watchwiz/Screen/add_event.dart';
 import 'package:watchwiz/Screen/custom_app_bar.dart';
 import 'package:watchwiz/Screen/custom_bottom_nav.dart';
 
@@ -9,14 +11,13 @@ class TableBasicsExample extends StatefulWidget {
   const TableBasicsExample({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _TableBasicsExampleState createState() => _TableBasicsExampleState();
 }
 
 class _TableBasicsExampleState extends State<TableBasicsExample> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _selectedDay = DateTime.now();
-  List _trabajos = [];
+  List<Map<String, dynamic>> _trabajos = [];
 
   @override
   void initState() {
@@ -24,51 +25,235 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
     _loadEvents(_selectedDay); // Carga los eventos del día actual
   }
 
-  void _showAddEventModal(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20), // Bordes redondeados
-          ),
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.8, // Ajusta el ancho
-            height:
-                MediaQuery.of(context).size.height * 0.7, // Ajusta la altura
-            padding: const EdgeInsets.all(5.0),
-            decoration: BoxDecoration(
-              color: Colors.grey[900], // Color de fondo
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const AddEventScreen(), // Tu contenido
-          ),
-        );
-      },
-    );
-  }
-
   void _loadEvents(DateTime date) async {
-    // Formatea la fecha para Firestore
     String dateKey = "${date.year}-${date.month}-${date.day}";
-
-    // Obtiene los eventos de Firestore para la fecha seleccionada
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('trabajos')
         .where('date', isEqualTo: dateKey)
         .get();
 
     setState(() {
-      _trabajos = snapshot.docs.map((doc) => doc.data()).toList();
+      _trabajos = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id; // Agrega el ID del documento para editar/borrar
+        return data;
+      }).toList();
     });
+  }
+
+  Future<void> _showAlert(String message) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('Información'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: const Text('Aceptar'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addJob() {
+    _showJobDialog(null);
+  }
+
+  void _editJob(Map<String, dynamic> job) {
+    _showJobDialog(job);
+  }
+
+  void _showJobDialog(Map<String, dynamic>? job) {
+    final TextEditingController clientNameController =
+        TextEditingController(text: job?['client_name']);
+    final TextEditingController descriptionController =
+        TextEditingController(text: job?['description']);
+    final TextEditingController phoneNumberController =
+        TextEditingController(text: job?['phone_number']);
+    final TextEditingController advanceController =
+        TextEditingController(text: job?['advance']?.toString());
+    final TextEditingController serviceCostController =
+        TextEditingController(text: job?['service_cost']?.toString());
+
+    // Inicializar _imageFile con la imagen previa si existe
+    File? _imageFile =
+        job != null && job['photo'] != null ? File(job['photo']) : null;
+
+    Future<void> _pickImage(bool fromCamera) async {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+      );
+
+      if (image != null) {
+        setState(() {
+          _imageFile = File(image.path);
+        });
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: Text(job == null ? 'Agregar Trabajo' : 'Editar Trabajo'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showModalBottomSheet<int>(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.camera_alt),
+                              title: const Text('Tomar foto'),
+                              onTap: () => Navigator.pop(context, 1),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.photo),
+                              title: const Text('Elegir de galería'),
+                              onTap: () => Navigator.pop(context, 2),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (result != null) {
+                      _pickImage(result == 1);
+                    }
+                  },
+                  child: _imageFile == null
+                      ? const Icon(Icons.image, size: 100, color: Colors.grey)
+                      : Image.file(_imageFile!, height: 100),
+                ),
+                const Text('Agrega la imagen'),
+                TextField(
+                  controller: clientNameController,
+                  decoration:
+                      const InputDecoration(labelText: 'Nombre del cliente'),
+                ),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(labelText: 'Descripción'),
+                ),
+                TextField(
+                  controller: phoneNumberController,
+                  decoration:
+                      const InputDecoration(labelText: 'Número de teléfono'),
+                ),
+                TextField(
+                  controller: serviceCostController,
+                  decoration:
+                      const InputDecoration(labelText: 'Costo del servicio'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: advanceController,
+                  decoration: const InputDecoration(labelText: 'Anticipo'),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              child: const Text('Guardar'),
+              onPressed: () async {
+                if (clientNameController.text.isEmpty ||
+                    descriptionController.text.isEmpty ||
+                    phoneNumberController.text.isEmpty ||
+                    advanceController.text.isEmpty ||
+                    serviceCostController.text.isEmpty) {
+                  _showAlert(
+                      'Por favor completa todos los campos antes de guardar.');
+                  return;
+                }
+
+                double? advance = double.tryParse(advanceController.text);
+                double? serviceCost =
+                    double.tryParse(serviceCostController.text);
+
+                if (advance == null || serviceCost == null) {
+                  _showAlert(
+                      'Los campos de anticipo y costo deben ser números.');
+                  return;
+                }
+
+                double remaining = serviceCost - advance;
+                final dateKey =
+                    "${_selectedDay.year}-${_selectedDay.month}-${_selectedDay.day}";
+
+                // Usar la ruta de la imagen anterior si no se selecciona una nueva imagen
+                String? imagePath = _imageFile?.path ?? job?['photo'];
+
+                if (job == null) {
+                  await FirebaseFirestore.instance.collection('trabajos').add({
+                    'client_name': clientNameController.text,
+                    'description': descriptionController.text,
+                    'phone_number': phoneNumberController.text,
+                    'advance': advance,
+                    'service_cost': serviceCost,
+                    'remaining': remaining,
+                    'date': dateKey,
+                    'photo': imagePath,
+                  });
+
+                  Navigator.of(context).pop();
+                  _showAlert('Trabajo agregado correctamente.');
+                } else {
+                  await FirebaseFirestore.instance
+                      .collection('trabajos')
+                      .doc(job['id'])
+                      .update({
+                    'client_name': clientNameController.text,
+                    'description': descriptionController.text,
+                    'phone_number': phoneNumberController.text,
+                    'advance': advance,
+                    'service_cost': serviceCost,
+                    'remaining': remaining,
+                    'photo': imagePath,
+                  });
+
+                  Navigator.of(context).pop();
+                  _showAlert('Trabajo editado correctamente.');
+                }
+
+                _loadEvents(_selectedDay);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteJob(String jobId) async {
+    await FirebaseFirestore.instance.collection('trabajos').doc(jobId).delete();
+    _loadEvents(_selectedDay);
+    _showAlert('Trabajo eliminado.');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(), // Llama al AppBar personalizado
-      bottomNavigationBar:
-          const CustomBottomNav(), // Barra de navegación inferior personalizada
+      appBar: const CustomAppBar(),
+      bottomNavigationBar: const CustomBottomNav(),
       backgroundColor: Colors.black,
       body: Column(
         children: [
@@ -82,8 +267,7 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
               setState(() {
                 _selectedDay = selectedDay;
               });
-              _loadEvents(
-                  selectedDay); // Carga eventos para el día seleccionado
+              _loadEvents(selectedDay);
             },
             onFormatChanged: (format) {
               setState(() {
@@ -122,36 +306,47 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                 : ListView.builder(
                     itemCount: _trabajos.length,
                     itemBuilder: (context, index) {
-                      var event = _trabajos[index];
+                      final trabajo = _trabajos[index];
                       return Card(
-                        color: Colors.grey[800],
+                        color: Colors.grey[900],
                         child: ListTile(
-                          title: Text(
-                            event['client_name'] ?? 'Nombre no especificado',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          subtitle: Text(
-                            event['description'] ?? 'Sin descripción',
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                          trailing: Text(
-                            event['phone_number'] ?? 'Número no especificado',
-                            style: const TextStyle(color: Colors.white54),
+                          leading: trabajo['photo'] != null
+                              ? Image.file(File(trabajo['photo']),
+                                  width: 50, height: 50, fit: BoxFit.cover)
+                              : const Icon(Icons.image, color: Colors.grey),
+                          title: Text(trabajo['client_name'],
+                              style: const TextStyle(color: Colors.white)),
+                          subtitle: Text(trabajo['description'],
+                              style: const TextStyle(color: Colors.white)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon:
+                                    const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _editJob(trabajo),
+                              ),
+                              IconButton(
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteJob(trabajo['id']),
+                              ),
+                            ],
                           ),
                         ),
                       );
                     },
                   ),
-          )
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Abre AddEventScreen como un modal en lugar de una nueva pantalla
-          _showAddEventModal(context);
-        },
+        onPressed: _addJob,
         backgroundColor: Colors.blue,
-        child: const Icon(Icons.add),
+        child: const Icon(
+          Icons.add,
+          color: Colors.white,
+        ),
       ),
     );
   }
