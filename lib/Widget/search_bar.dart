@@ -12,7 +12,7 @@ class CustomSearchBar extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
               // ignore: deprecated_member_use

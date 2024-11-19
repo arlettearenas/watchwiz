@@ -5,7 +5,7 @@ import 'package:watchwiz/Screen/compras.dart';
 import 'package:watchwiz/Screen/perfil.dart';
 import 'package:watchwiz/Screen/trabajos.dart';
 
-import 'home_screen.dart';
+import '../Screen/home_screen.dart';
 
 class CustomBottomNav extends StatefulWidget {
   const CustomBottomNav({super.key});

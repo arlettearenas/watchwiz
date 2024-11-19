@@ -4,8 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:watchwiz/Screen/custom_app_bar.dart';
-import 'package:watchwiz/Screen/custom_bottom_nav.dart';
+import 'package:watchwiz/Widget/custom_app_bar.dart';
+import 'package:watchwiz/Widget/custom_bottom_nav.dart';
 
 class TableBasicsExample extends StatefulWidget {
   const TableBasicsExample({super.key});
@@ -31,7 +31,6 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
         .collection('trabajos')
         .where('date', isEqualTo: dateKey)
         .get();
-
     setState(() {
       _trabajos = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;

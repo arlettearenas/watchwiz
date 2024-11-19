@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:watchwiz/Services/authentication.dart';
 import 'package:watchwiz/Widget/button.dart';
-import 'package:watchwiz/Screen/custom_app_bar.dart';
-import 'package:watchwiz/Screen/custom_bottom_nav.dart';
+import 'package:watchwiz/Widget/custom_app_bar.dart';
+import 'package:watchwiz/Widget/custom_bottom_nav.dart';
 import 'package:watchwiz/Screen/login.dart';
 
 class PerfilScreen extends StatelessWidget {

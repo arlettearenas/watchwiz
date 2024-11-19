@@ -1,8 +1,8 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
-import 'package:watchwiz/Screen/custom_app_bar.dart';
-import 'package:watchwiz/Screen/custom_bottom_nav.dart';
+import 'package:watchwiz/Widget/custom_app_bar.dart';
+import 'package:watchwiz/Widget/custom_bottom_nav.dart';
 
 class ComprasScreen extends StatelessWidget {
   const ComprasScreen({super.key});
