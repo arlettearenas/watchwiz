@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:watchwiz/Widget/custom_app_bar.dart';
 import 'package:watchwiz/Widget/custom_bottom_nav.dart';
-import 'package:watchwiz/Widget/search_bar.dart'; // Asegúrate de importar tu CustomSearchBar
+import 'package:watchwiz/Widget/search_bar.dart';
+import 'package:watchwiz/models/refacciones.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,7 +16,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Map<String, dynamic>> _refacciones = [];
+  List<Refaccion> _refacciones = [];
   String searchText = ''; // Variable para almacenar el texto de búsqueda
 
   @override
@@ -28,38 +29,16 @@ class _HomeScreenState extends State<HomeScreen> {
     QuerySnapshot snapshot =
         await FirebaseFirestore.instance.collection('refacciones').get();
     setState(() {
-      _refacciones = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id; // Agrega el ID del documento para editar/borrar
-        return data;
-      }).toList();
+      _refacciones =
+          snapshot.docs.map((doc) => Refaccion.fromFirestore(doc)).toList();
     });
-  }
-
-  Future<void> _showAlert(String message) async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Text('Información'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              child: const Text('Aceptar'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _addRefaccion() {
     _showRefaccionDialog(null);
   }
 
-  void _editRefaccion(Map<String, dynamic> refaccion) {
+  void _editRefaccion(Refaccion refaccion) {
     _showRefaccionDialog(refaccion);
   }
 
@@ -72,30 +51,28 @@ class _HomeScreenState extends State<HomeScreen> {
     _showAlert('Refacción eliminada.');
   }
 
-  void _showRefaccionDialog(Map<String, dynamic>? refaccion) {
+  void _showRefaccionDialog(Refaccion? refaccion) {
     final TextEditingController caracteristicasController =
-        TextEditingController(text: refaccion?['caracteristicas']);
+        TextEditingController(text: refaccion?.caracteristicas);
     final TextEditingController categoriaController =
-        TextEditingController(text: refaccion?['categoria']);
+        TextEditingController(text: refaccion?.categoria);
     final TextEditingController colorController =
-        TextEditingController(text: refaccion?['color']);
+        TextEditingController(text: refaccion?.color);
     final TextEditingController existenciaController =
-        TextEditingController(text: refaccion?['existencia']?.toString());
+        TextEditingController(text: refaccion?.existencia.toString());
     final TextEditingController medidaController =
-        TextEditingController(text: refaccion?['medida']);
+        TextEditingController(text: refaccion?.medida);
     final TextEditingController precioController =
-        TextEditingController(text: refaccion?['precio']?.toString());
+        TextEditingController(text: refaccion?.precio.toString());
 
-    // Inicializar _imageFile con la imagen previa si existe
-    File? _imageFile = refaccion != null && refaccion['imagen'] != null
-        ? File(refaccion['imagen'])
+    File? _imageFile = refaccion != null && refaccion.imagen != null
+        ? File(refaccion.imagen!)
         : null;
 
     Future<void> _pickImage(bool fromCamera) async {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
-        source: fromCamera ? ImageSource.camera : ImageSource.gallery,
-      );
+          source: fromCamera ? ImageSource.camera : ImageSource.gallery);
 
       if (image != null) {
         setState(() {
@@ -205,28 +182,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   return;
                 }
 
-                // Usar la ruta de la imagen anterior si no se selecciona una nueva imagen
-                String? imagePath = _imageFile?.path ?? refaccion?['imagen'];
+                String? imagePath = _imageFile?.path ?? refaccion?.imagen;
 
                 if (refaccion == null) {
+                  Refaccion newRefaccion = Refaccion(
+                    caracteristicas: caracteristicasController.text,
+                    categoria: categoriaController.text,
+                    color: colorController.text,
+                    existencia: existencia!,
+                    medida: medidaController.text,
+                    precio: precio!,
+                    imagen: imagePath,
+                  );
                   await FirebaseFirestore.instance
                       .collection('refacciones')
-                      .add({
-                    'caracteristicas': caracteristicasController.text,
-                    'categoria': categoriaController.text,
-                    'color': colorController.text,
-                    'existencia': existencia,
-                    'medida': medidaController.text,
-                    'precio': precio,
-                    'imagen': imagePath,
-                  });
-
+                      .add(newRefaccion.toMap());
                   Navigator.of(context).pop();
                   _showAlert('Refacción agregada correctamente.');
                 } else {
                   await FirebaseFirestore.instance
                       .collection('refacciones')
-                      .doc(refaccion['id'])
+                      .doc(refaccion.id)
                       .update({
                     'caracteristicas': caracteristicasController.text,
                     'categoria': categoriaController.text,
@@ -236,7 +212,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     'precio': precio,
                     'imagen': imagePath,
                   });
-
                   Navigator.of(context).pop();
                   _showAlert('Refacción editada correctamente.');
                 }
@@ -253,12 +228,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(), // Llama al AppBar personalizado
+      appBar: const CustomAppBar(),
       bottomNavigationBar: const CustomBottomNav(),
       backgroundColor: Colors.black,
       body: Column(
         children: [
-          // Agregar la barra de búsqueda aquí
+          const SizedBox(height: 20),
           CustomSearchBar(
             onChanged: (value) {
               setState(() {
@@ -266,74 +241,66 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
           ),
-          const SizedBox(height: 20), // Espacio debajo del buscador
-          // Cambiar el ListView.builder a GridView.builder
+          const SizedBox(height: 20),
           Expanded(
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, // Dos columnas
+                crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
               itemCount: _refacciones
                   .where((refaccion) =>
-                      refaccion['caracteristicas']
+                      refaccion.caracteristicas
                           .toLowerCase()
                           .contains(searchText) ||
-                      refaccion['categoria'].toLowerCase().contains(searchText))
+                      refaccion.categoria.toLowerCase().contains(searchText))
                   .length,
               itemBuilder: (context, index) {
                 final refaccion = _refacciones
                     .where((refaccion) =>
-                        refaccion['caracteristicas']
+                        refaccion.caracteristicas
                             .toLowerCase()
                             .contains(searchText) ||
-                        refaccion['categoria']
-                            .toLowerCase()
-                            .contains(searchText))
+                        refaccion.categoria.toLowerCase().contains(searchText))
                     .toList()[index];
 
                 return Card(
                   color: const Color.fromARGB(255, 42, 42, 42),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: GestureDetector(
+                  child: InkWell(
                     onTap: () => _editRefaccion(refaccion),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (refaccion['imagen'] != null)
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16)),
-                            child: Image.file(
-                              File(refaccion['imagen']),
-                              height: 100,
-                              width: double.infinity,
-                              fit: BoxFit.fill,
-                            ),
-                          ),
-                        const SizedBox(height: 7),
-                        Text(
-                          refaccion['categoria'] ?? 'No disponible',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 12),
-                        ),
-                        Text("\$${refaccion['precio']?.toString() ?? '0'}",
+                        refaccion.imagen != null
+                            ? Image.file(
+                                File(refaccion.imagen!),
+                                height: 120, // Limitar la altura
+                                width: MediaQuery.of(context).size.width /
+                                    2, // Ajustar al 50% del ancho
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(Icons.image, size: 100),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            refaccion.categoria,
                             style: const TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            )),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () =>
-                                  _deleteRefaccion(refaccion['id']),
-                            ),
-                          ],
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            '\$${refaccion.precio}',
+                            style: const TextStyle(
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),
@@ -345,13 +312,29 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.blueAccent,
         onPressed: _addRefaccion,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
+    );
+  }
+
+  void _showAlert(String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('Aviso'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: const Text('Aceptar'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
     );
   }
 }

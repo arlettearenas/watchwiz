@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:watchwiz/Widget/custom_app_bar.dart';
 import 'package:watchwiz/Widget/custom_bottom_nav.dart';
+import 'package:watchwiz/models/job.dart'; // Asegúrate de importar el modelo
 
 class TableBasicsExample extends StatefulWidget {
   const TableBasicsExample({super.key});
@@ -17,7 +18,7 @@ class TableBasicsExample extends StatefulWidget {
 class _TableBasicsExampleState extends State<TableBasicsExample> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _selectedDay = DateTime.now();
-  List<Map<String, dynamic>> _trabajos = [];
+  List<Job> _trabajos = [];
 
   @override
   void initState() {
@@ -33,9 +34,7 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
         .get();
     setState(() {
       _trabajos = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id; // Agrega el ID del documento para editar/borrar
-        return data;
+        return Job.fromMap(doc.data() as Map<String, dynamic>, doc.id);
       }).toList();
     });
   }
@@ -63,25 +62,24 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
     _showJobDialog(null);
   }
 
-  void _editJob(Map<String, dynamic> job) {
+  void _editJob(Job job) {
     _showJobDialog(job);
   }
 
-  void _showJobDialog(Map<String, dynamic>? job) {
+  void _showJobDialog(Job? job) {
     final TextEditingController clientNameController =
-        TextEditingController(text: job?['client_name']);
+        TextEditingController(text: job?.clientName);
     final TextEditingController descriptionController =
-        TextEditingController(text: job?['description']);
+        TextEditingController(text: job?.description);
     final TextEditingController phoneNumberController =
-        TextEditingController(text: job?['phone_number']);
+        TextEditingController(text: job?.phoneNumber);
     final TextEditingController advanceController =
-        TextEditingController(text: job?['advance']?.toString());
+        TextEditingController(text: job?.advance?.toString());
     final TextEditingController serviceCostController =
-        TextEditingController(text: job?['service_cost']?.toString());
+        TextEditingController(text: job?.serviceCost?.toString());
 
-    // Inicializar _imageFile con la imagen previa si existe
     File? _imageFile =
-        job != null && job['photo'] != null ? File(job['photo']) : null;
+        job != null && job.photo != null ? File(job.photo!) : null;
 
     Future<void> _pickImage(bool fromCamera) async {
       final ImagePicker picker = ImagePicker();
@@ -198,44 +196,45 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                 final dateKey =
                     "${_selectedDay.year}-${_selectedDay.month}-${_selectedDay.day}";
 
-                // Usar la ruta de la imagen anterior si no se selecciona una nueva imagen
-                String? imagePath = _imageFile?.path ?? job?['photo'];
+                String? imagePath = _imageFile?.path ?? job?.photo;
 
-                if (job == null) {
-                  await FirebaseFirestore.instance.collection('trabajos').add({
-                    'client_name': clientNameController.text,
-                    'description': descriptionController.text,
-                    'phone_number': phoneNumberController.text,
-                    'advance': advance,
-                    'service_cost': serviceCost,
-                    'remaining': remaining,
-                    'date': dateKey,
-                    'photo': imagePath,
+                Job newJob = Job(
+                  id: job?.id ?? '',
+                  clientName: clientNameController.text,
+                  description: descriptionController.text,
+                  phoneNumber: phoneNumberController.text,
+                  advance: advance,
+                  serviceCost: serviceCost,
+                  remaining: remaining,
+                  date: dateKey,
+                  photo: imagePath,
+                );
+
+                try {
+                  if (job == null) {
+                    await FirebaseFirestore.instance
+                        .collection('trabajos')
+                        .add(newJob.toMap());
+                  } else {
+                    await FirebaseFirestore.instance
+                        .collection('trabajos')
+                        .doc(job.id)
+                        .update(newJob.toMap());
+                  }
+
+                  // Mostrar alerta después de guardar
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _showAlert('Trabajo guardado correctamente.');
                   });
 
                   Navigator.of(context).pop();
-                  _showAlert('Trabajo agregado correctamente.');
-                } else {
-                  await FirebaseFirestore.instance
-                      .collection('trabajos')
-                      .doc(job['id'])
-                      .update({
-                    'client_name': clientNameController.text,
-                    'description': descriptionController.text,
-                    'phone_number': phoneNumberController.text,
-                    'advance': advance,
-                    'service_cost': serviceCost,
-                    'remaining': remaining,
-                    'photo': imagePath,
-                  });
-
-                  Navigator.of(context).pop();
-                  _showAlert('Trabajo editado correctamente.');
+                  _loadEvents(_selectedDay);
+                } catch (e) {
+                  print("Error al guardar el trabajo: $e");
+                  _showAlert('Hubo un error al guardar el trabajo.');
                 }
-
-                _loadEvents(_selectedDay);
               },
-            ),
+            )
           ],
         );
       },
@@ -251,102 +250,105 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(),
-      bottomNavigationBar: const CustomBottomNav(),
-      backgroundColor: Colors.black,
-      body: Column(
-        children: [
-          TableCalendar(
-            firstDay: DateTime.utc(2020, 1, 1),
-            lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _selectedDay,
-            calendarFormat: _calendarFormat,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() {
-                _selectedDay = selectedDay;
-              });
-              _loadEvents(selectedDay);
-            },
-            onFormatChanged: (format) {
-              setState(() {
-                _calendarFormat = format;
-              });
-            },
-            calendarStyle: const CalendarStyle(
-              selectedDecoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
+        appBar: const CustomAppBar(),
+        bottomNavigationBar: const CustomBottomNav(),
+        backgroundColor: Colors.black,
+        body: Column(
+          children: [
+            TableCalendar(
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2030, 12, 31),
+              focusedDay: _selectedDay,
+              calendarFormat: _calendarFormat,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDay = selectedDay;
+                });
+                _loadEvents(selectedDay);
+              },
+              onFormatChanged: (format) {
+                setState(() {
+                  _calendarFormat = format;
+                });
+              },
+              calendarStyle: const CalendarStyle(
+                selectedDecoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                ),
+                outsideDaysVisible: false,
+                weekendTextStyle: TextStyle(color: Colors.red),
+                defaultTextStyle: TextStyle(color: Colors.white),
               ),
-              todayDecoration: BoxDecoration(
-                color: Colors.orange,
-                shape: BoxShape.circle,
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleTextStyle: TextStyle(color: Colors.white),
+                leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
+                rightChevronIcon:
+                    Icon(Icons.chevron_right, color: Colors.white),
               ),
-              outsideDaysVisible: false,
-              weekendTextStyle: TextStyle(color: Colors.red),
-              defaultTextStyle: TextStyle(color: Colors.white),
             ),
-            headerStyle: const HeaderStyle(
-              formatButtonVisible: false,
-              titleTextStyle: TextStyle(color: Colors.white),
-              leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
-              rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _trabajos.isEmpty
-                ? const Center(
-                    child: Text(
-                      "No hay trabajos para este día",
-                      style: TextStyle(color: Colors.white),
+            const SizedBox(height: 10),
+            Expanded(
+              child: _trabajos.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "No hay trabajos para este día",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _trabajos.length,
+                      itemBuilder: (context, index) {
+                        final trabajo = _trabajos[index];
+                        return Card(
+                            color: Colors.grey[900],
+                            child: ListTile(
+                              leading: trabajo.photo != null
+                                  ? Image.file(
+                                      File(trabajo.photo!),
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : const Icon(Icons.image,
+                                      color: Colors.white),
+                              title: Text(
+                                trabajo.clientName,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              subtitle: Text(
+                                trabajo.description,
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                              trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit,
+                                          color: Colors.blue),
+                                      onPressed: () => _editJob(trabajo),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red),
+                                      onPressed: () => _deleteJob(trabajo.id),
+                                    ),
+                                  ]),
+                            ));
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: _trabajos.length,
-                    itemBuilder: (context, index) {
-                      final trabajo = _trabajos[index];
-                      return Card(
-                        color: Colors.grey[900],
-                        child: ListTile(
-                          leading: trabajo['photo'] != null
-                              ? Image.file(File(trabajo['photo']),
-                                  width: 50, height: 50, fit: BoxFit.cover)
-                              : const Icon(Icons.image, color: Colors.grey),
-                          title: Text(trabajo['client_name'],
-                              style: const TextStyle(color: Colors.white)),
-                          subtitle: Text(trabajo['description'],
-                              style: const TextStyle(color: Colors.white)),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon:
-                                    const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _editJob(trabajo),
-                              ),
-                              IconButton(
-                                icon:
-                                    const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteJob(trabajo['id']),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addJob,
-        backgroundColor: Colors.blue,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
+            ),
+          ],
         ),
-      ),
-    );
+        floatingActionButton: FloatingActionButton(
+            onPressed: _addJob,
+            backgroundColor: Colors.blueAccent,
+            child: const Icon(Icons.add, color: Colors.white)));
   }
 }
