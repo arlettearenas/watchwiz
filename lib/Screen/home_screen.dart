@@ -42,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _showRefaccionDialog(refaccion);
   }
 
+  // ignore: unused_element
   void _deleteRefaccion(String refaccionId) async {
     await FirebaseFirestore.instance
         .collection('refacciones')
@@ -189,9 +190,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     caracteristicas: caracteristicasController.text,
                     categoria: categoriaController.text,
                     color: colorController.text,
-                    existencia: existencia!,
+                    existencia: existencia,
                     medida: medidaController.text,
-                    precio: precio!,
+                    precio: precio,
                     imagen: imagePath,
                   );
                   await FirebaseFirestore.instance

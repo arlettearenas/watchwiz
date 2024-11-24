@@ -74,9 +74,9 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
     final TextEditingController phoneNumberController =
         TextEditingController(text: job?.phoneNumber);
     final TextEditingController advanceController =
-        TextEditingController(text: job?.advance?.toString());
+        TextEditingController(text: job?.advance.toString());
     final TextEditingController serviceCostController =
-        TextEditingController(text: job?.serviceCost?.toString());
+        TextEditingController(text: job?.serviceCost.toString());
 
     File? _imageFile =
         job != null && job.photo != null ? File(job.photo!) : null;
