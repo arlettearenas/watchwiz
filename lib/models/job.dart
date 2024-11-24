@@ -1,52 +1,61 @@
 class Job {
   final String id;
-  final String clientName;
+  final String client_name;
   final String description;
-  final String phoneNumber;
+  final String phone_number;
   final double advance;
-  final double serviceCost;
+  final double service_cost;
   final double remaining;
-  final String date;
-  final String? photo;
+  final String review_date; // Fecha de revisión
+  final String photo;
+  final String received_date; // Fecha de creación
+  final String status; // Estado
 
   Job({
     required this.id,
-    required this.clientName,
+    required this.client_name,
     required this.description,
-    required this.phoneNumber,
+    required this.phone_number,
     required this.advance,
-    required this.serviceCost,
+    required this.service_cost,
     required this.remaining,
-    required this.date,
-    this.photo,
+    required this.review_date,
+    required this.photo,
+    required this.received_date,
+    required this.status,
   });
 
   // Convertir un mapa de datos de Firestore a un objeto Job
   factory Job.fromMap(Map<String, dynamic> data, String documentId) {
     return Job(
       id: documentId,
-      clientName: data['client_name'],
-      description: data['description'],
-      phoneNumber: data['phone_number'],
-      advance: data['advance'].toDouble(),
-      serviceCost: data['service_cost'].toDouble(),
-      remaining: data['remaining'].toDouble(),
-      date: data['date'],
+      client_name: data['client_name'] ?? '',
+      description: data['description'] ?? '',
+      phone_number: data['phone_number'] ?? '',
+      advance: data['advance']?.toDouble() ?? 0.0,
+      service_cost: data['service_cost']?.toDouble() ?? 0.0,
+      remaining: data['remaining']?.toDouble() ?? 0.0,
+      review_date: data['review_date'] ?? '',
       photo: data['photo'],
+      received_date: data['received_date'] ??
+          DateTime.now().toIso8601String(), // Default to current date if null
+      status: data['status'] ?? 'En espera', // Default status if null
     );
   }
 
   // Convertir un objeto Job a un mapa de datos para Firestore
   Map<String, dynamic> toMap() {
     return {
-      'client_name': clientName,
+      'client_name': client_name,
       'description': description,
-      'phone_number': phoneNumber,
+      'phone_number': phone_number,
       'advance': advance,
-      'service_cost': serviceCost,
+      'service_cost': service_cost,
       'remaining': remaining,
-      'date': date,
+      'review_date': review_date,
       'photo': photo,
+      'received_date': received_date,
+      'status': status,
     };
   }
 }

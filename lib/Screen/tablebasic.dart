@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:watchwiz/Widget/custom_app_bar.dart';
 import 'package:watchwiz/Widget/custom_bottom_nav.dart';
@@ -27,11 +28,17 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
   }
 
   void _loadEvents(DateTime date) async {
+    // Convertimos la fecha seleccionada en formato YYYY-MM-DD
     String dateKey = "${date.year}-${date.month}-${date.day}";
+
+    // Realizamos la consulta a Firebase para obtener los trabajos que tienen esa fecha
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('trabajos')
-        .where('date', isEqualTo: dateKey)
+        .where('review_date',
+            isEqualTo:
+                dateKey) // Asegúrate de que 'review_date' sea del tipo String en el formato YYYY-MM-DD
         .get();
+
     setState(() {
       _trabajos = snapshot.docs.map((doc) {
         return Job.fromMap(doc.data() as Map<String, dynamic>, doc.id);
@@ -68,15 +75,18 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
 
   void _showJobDialog(Job? job) {
     final TextEditingController clientNameController =
-        TextEditingController(text: job?.clientName);
+        TextEditingController(text: job?.client_name);
     final TextEditingController descriptionController =
         TextEditingController(text: job?.description);
     final TextEditingController phoneNumberController =
-        TextEditingController(text: job?.phoneNumber);
+        TextEditingController(text: job?.phone_number);
     final TextEditingController advanceController =
         TextEditingController(text: job?.advance.toString());
     final TextEditingController serviceCostController =
-        TextEditingController(text: job?.serviceCost.toString());
+        TextEditingController(text: job?.service_cost.toString());
+
+    // Inicializa el estado
+    String selectedStatus = job?.status ?? 'En espera';
 
     File? _imageFile =
         job != null && job.photo != null ? File(job.photo!) : null;
@@ -146,10 +156,10 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                   decoration: const InputDecoration(labelText: 'Descripción'),
                 ),
                 TextField(
-                  controller: phoneNumberController,
-                  decoration:
-                      const InputDecoration(labelText: 'Número de teléfono'),
-                ),
+                    controller: phoneNumberController,
+                    decoration:
+                        const InputDecoration(labelText: 'Número de teléfono'),
+                    keyboardType: TextInputType.number),
                 TextField(
                   controller: serviceCostController,
                   decoration:
@@ -160,6 +170,22 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                   controller: advanceController,
                   decoration: const InputDecoration(labelText: 'Anticipo'),
                   keyboardType: TextInputType.number,
+                ),
+                // Dropdown para seleccionar el estado
+                DropdownButton<String>(
+                  value: selectedStatus,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedStatus = newValue!;
+                    });
+                  },
+                  items: <String>['En espera', 'Inconveniente', 'Reparado']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
                 ),
               ],
             ),
@@ -181,6 +207,10 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                       'Por favor completa todos los campos antes de guardar.');
                   return;
                 }
+                if (_imageFile == null) {
+                  _showAlert('La foto es obligatoria para guardar el trabajo.');
+                  return;
+                }
 
                 double? advance = double.tryParse(advanceController.text);
                 double? serviceCost =
@@ -195,19 +225,24 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                 double remaining = serviceCost - advance;
                 final dateKey =
                     "${_selectedDay.year}-${_selectedDay.month}-${_selectedDay.day}";
+                String createdDate =
+                    DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-                String? imagePath = _imageFile?.path ?? job?.photo;
+                String imagePath = _imageFile!.path;
 
                 Job newJob = Job(
                   id: job?.id ?? '',
-                  clientName: clientNameController.text,
+                  client_name: clientNameController.text,
                   description: descriptionController.text,
-                  phoneNumber: phoneNumberController.text,
+                  phone_number: phoneNumberController.text,
                   advance: advance,
-                  serviceCost: serviceCost,
+                  service_cost: serviceCost,
                   remaining: remaining,
-                  date: dateKey,
-                  photo: imagePath,
+                  review_date:
+                      dateKey, // Usamos 'review_date' como la fecha a mostrar
+                  photo: imagePath, // Foto obligatoria
+                  received_date: createdDate, // Fecha de creación
+                  status: selectedStatus, // Estado
                 );
 
                 try {
@@ -264,13 +299,22 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
               onDaySelected: (selectedDay, focusedDay) {
                 setState(() {
                   _selectedDay = selectedDay;
+                  _loadEvents(selectedDay);
                 });
-                _loadEvents(selectedDay);
               },
               onFormatChanged: (format) {
                 setState(() {
                   _calendarFormat = format;
                 });
+              },
+              eventLoader: (day) {
+                // Filtra los trabajos por fecha
+                return _trabajos
+                    .where((job) =>
+                        job.review_date ==
+                        "${day.year}-${day.month}-${day.day}")
+                    .map((e) => e.client_name) // Muestra el nombre del cliente
+                    .toList();
               },
               calendarStyle: const CalendarStyle(
                 selectedDecoration: BoxDecoration(
@@ -310,8 +354,9 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                             color: Colors.grey[900],
                             child: ListTile(
                               leading: trabajo.photo != null
-                                  ? Image.file(
-                                      File(trabajo.photo!),
+                                  ? Image.network(
+                                      trabajo
+                                          .photo!, // Usamos la URL de Firebase Storage
                                       width: 50,
                                       height: 50,
                                       fit: BoxFit.cover,
@@ -319,7 +364,7 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                                   : const Icon(Icons.image,
                                       color: Colors.white),
                               title: Text(
-                                trabajo.clientName,
+                                trabajo.client_name,
                                 style: const TextStyle(color: Colors.white),
                               ),
                               subtitle: Text(
