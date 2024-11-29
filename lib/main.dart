@@ -1,7 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:watchwiz/Screen/home_screen.dart';
 import 'package:watchwiz/Screen/login.dart';
 
 Future<void> main() async {
@@ -11,6 +9,7 @@ Future<void> main() async {
           apiKey: "AIzaSyBlrxxwn2VbO6K67Xx-pxIyvz8TpxziydQ",
           appId: "1:163947119435:android:cd8e141bb422fc31811ece",
           messagingSenderId: "163947119435",
+          storageBucket: "watchwiz-721eb.appspot.com",
           projectId: "watchwiz-721eb"));
   runApp(const MyApp());
 }
@@ -20,17 +19,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: StreamBuilder(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return const HomeScreen();
-            } else {
-              return const LoginScreen();
-            }
-          }),
-    );
+    return const MaterialApp(
+        debugShowCheckedModeBanner: false, home: LoginScreen());
   }
 }

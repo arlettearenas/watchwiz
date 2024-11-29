@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:watchwiz/Widget/custom_app_bar.dart';
@@ -17,12 +18,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Refaccion> _refacciones = [];
-  String searchText = ''; // Variable para almacenar el texto de búsqueda
+  String searchText = '';
 
   @override
   void initState() {
     super.initState();
-    _loadRefacciones(); // Carga las refacciones al iniciar
+    _loadRefacciones();
   }
 
   void _loadRefacciones() async {
@@ -42,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _showRefaccionDialog(refaccion);
   }
 
-  // ignore: unused_element
   void _deleteRefaccion(String refaccionId) async {
     await FirebaseFirestore.instance
         .collection('refacciones')
@@ -50,6 +50,22 @@ class _HomeScreenState extends State<HomeScreen> {
         .delete();
     _loadRefacciones();
     _showAlert('Refacción eliminada.');
+  }
+
+  Future<String?> uploadImage(XFile imageFile) async {
+    try {
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      Reference storageRef =
+          FirebaseStorage.instance.ref().child('images/$fileName');
+      UploadTask uploadTask = storageRef.putFile(File(imageFile.path));
+
+      TaskSnapshot snapshot = await uploadTask.whenComplete(() {});
+      String imageUrl = await snapshot.ref.getDownloadURL();
+      return imageUrl;
+    } catch (e) {
+      print("Error uploading image: $e");
+      return null;
+    }
   }
 
   void _showRefaccionDialog(Refaccion? refaccion) {
@@ -66,19 +82,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final TextEditingController precioController =
         TextEditingController(text: refaccion?.precio.toString());
 
-    File? _imageFile = refaccion != null && refaccion.imagen != null
-        ? File(refaccion.imagen!)
-        : null;
+    String? imageUrl = refaccion?.imagen;
 
-    Future<void> _pickImage(bool fromCamera) async {
+    Future<void> pickImage(bool fromCamera) async {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
           source: fromCamera ? ImageSource.camera : ImageSource.gallery);
 
       if (image != null) {
-        setState(() {
-          _imageFile = File(image.path);
-        });
+        final uploadedUrl = await uploadImage(image);
+        if (uploadedUrl != null) {
+          setState(() {
+            imageUrl = uploadedUrl; // Actualiza la URL con la nueva imagen
+          });
+        } else {
+          _showAlert('Error al subir la imagen.');
+        }
       }
     }
 
@@ -117,14 +136,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
 
                     if (result != null) {
-                      _pickImage(result == 1);
+                      pickImage(result == 1);
                     }
                   },
-                  child: _imageFile == null
-                      ? const Icon(Icons.image, size: 100, color: Colors.grey)
-                      : Image.file(_imageFile!, height: 100),
+                  child: imageUrl == null
+                      ? const Text('Selecciona una imagen')
+                      : Image.network(imageUrl!, height: 100),
                 ),
-                const Text('Agrega la imagen'),
                 TextField(
                   controller: caracteristicasController,
                   decoration:
@@ -183,9 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   return;
                 }
 
-                String? imagePath = _imageFile?.path ?? refaccion?.imagen;
-
                 if (refaccion == null) {
+                  // Nueva refacción
                   Refaccion newRefaccion = Refaccion(
                     caracteristicas: caracteristicasController.text,
                     categoria: categoriaController.text,
@@ -193,7 +210,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     existencia: existencia,
                     medida: medidaController.text,
                     precio: precio,
-                    imagen: imagePath,
+                    imagen:
+                        imageUrl, // Puede ser null si no se seleccionó imagen
                   );
                   await FirebaseFirestore.instance
                       .collection('refacciones')
@@ -201,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.of(context).pop();
                   _showAlert('Refacción agregada correctamente.');
                 } else {
+                  // Editar refacción existente
                   await FirebaseFirestore.instance
                       .collection('refacciones')
                       .doc(refaccion.id)
@@ -211,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'existencia': existencia,
                     'medida': medidaController.text,
                     'precio': precio,
-                    'imagen': imagePath,
+                    'imagen': imageUrl,
                   });
                   Navigator.of(context).pop();
                   _showAlert('Refacción editada correctamente.');
@@ -229,109 +248,114 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(),
-      bottomNavigationBar: const CustomBottomNav(),
-      backgroundColor: Colors.black,
-      body: Column(
-        children: [
-          const SizedBox(height: 20),
-          CustomSearchBar(
-            onChanged: (value) {
-              setState(() {
-                searchText = value.toLowerCase();
-              });
-            },
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemCount: _refacciones
-                  .where((refaccion) =>
-                      refaccion.caracteristicas
-                          .toLowerCase()
-                          .contains(searchText) ||
-                      refaccion.categoria.toLowerCase().contains(searchText))
-                  .length,
-              itemBuilder: (context, index) {
-                final refaccion = _refacciones
-                    .where((refaccion) =>
-                        refaccion.caracteristicas
-                            .toLowerCase()
-                            .contains(searchText) ||
-                        refaccion.categoria.toLowerCase().contains(searchText))
-                    .toList()[index];
-
-                return Card(
-                  color: const Color.fromARGB(255, 42, 42, 42),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: InkWell(
-                    onTap: () => _editRefaccion(refaccion),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        refaccion.imagen != null
-                            ? Image.file(
-                                File(refaccion.imagen!),
-                                height: 120, // Limitar la altura
-                                width: MediaQuery.of(context).size.width /
-                                    2, // Ajustar al 50% del ancho
-                                fit: BoxFit.cover,
-                              )
-                            : const Icon(Icons.image, size: 100),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            refaccion.categoria,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            '\$${refaccion.precio}',
-                            style: const TextStyle(
-                                color: Colors.blueAccent,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+        appBar: const CustomAppBar(),
+        bottomNavigationBar: const CustomBottomNav(),
+        backgroundColor: Colors.black,
+        body: Column(
+          children: [
+            const SizedBox(height: 20),
+            CustomSearchBar(
+              onChanged: (value) {
+                setState(() {
+                  searchText = value.toLowerCase();
+                });
               },
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.blueAccent,
-        onPressed: _addRefaccion,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
+            const SizedBox(height: 20),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemCount: _refacciones
+                    .where((refaccion) =>
+                        refaccion.categoria
+                            .toLowerCase()
+                            .contains(searchText) ||
+                        refaccion.caracteristicas
+                            .toLowerCase()
+                            .contains(searchText))
+                    .length,
+                itemBuilder: (context, index) {
+                  final refaccion = _refacciones
+                      .where((refaccion) =>
+                          refaccion.categoria
+                              .toLowerCase()
+                              .contains(searchText) ||
+                          refaccion.caracteristicas
+                              .toLowerCase()
+                              .contains(searchText))
+                      .toList()[index];
+
+                  return Card(
+                    color: const Color.fromARGB(255, 42, 42, 42),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: InkWell(
+                      onTap: () => _editRefaccion(refaccion),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          refaccion.imagen != null
+                              ? Uri.tryParse(refaccion.imagen!)?.isAbsolute ??
+                                      false
+                                  ? Image.network(
+                                      refaccion.imagen!,
+                                      height: 100,
+                                      fit: BoxFit.cover,
+                                    ) // Si la imagen es una URL válida
+                                  : Image.file(File(refaccion.imagen!),
+                                      height: 100) // Si es una imagen local
+                              : const Icon(
+                                  Icons.image,
+                                  size: 100,
+                                  color: Colors.grey,
+                                ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              refaccion.categoria,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteRefaccion),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: Colors.blueAccent,
+          onPressed: _addRefaccion,
+          child: const Icon(Icons.add, color: Colors.white),
+        ));
   }
 
   void _showAlert(String message) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Text('Aviso'),
+          title: const Text('Información'),
           content: Text(message),
           actions: [
             TextButton(
-              child: const Text('Aceptar'),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cerrar'),
             ),
           ],
         );

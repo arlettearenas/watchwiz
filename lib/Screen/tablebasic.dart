@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -28,15 +29,11 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
   }
 
   void _loadEvents(DateTime date) async {
-    // Convertimos la fecha seleccionada en formato YYYY-MM-DD
     String dateKey = "${date.year}-${date.month}-${date.day}";
 
-    // Realizamos la consulta a Firebase para obtener los trabajos que tienen esa fecha
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('trabajos')
-        .where('review_date',
-            isEqualTo:
-                dateKey) // Asegúrate de que 'review_date' sea del tipo String en el formato YYYY-MM-DD
+        .where('review_date', isEqualTo: dateKey)
         .get();
 
     setState(() {
@@ -85,13 +82,13 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
     final TextEditingController serviceCostController =
         TextEditingController(text: job?.service_cost.toString());
 
-    // Inicializa el estado
     String selectedStatus = job?.status ?? 'En espera';
 
-    File? _imageFile =
-        job != null && job.photo != null ? File(job.photo!) : null;
+    // Variable de imagen
+    File? imageFile;
+    String imageUrl = job?.photo ?? ''; // Si tiene foto, la URL ya está
 
-    Future<void> _pickImage(bool fromCamera) async {
+    Future<void> pickImage(bool fromCamera) async {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: fromCamera ? ImageSource.camera : ImageSource.gallery,
@@ -99,7 +96,7 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
 
       if (image != null) {
         setState(() {
-          _imageFile = File(image.path);
+          imageFile = File(image.path);
         });
       }
     }
@@ -138,14 +135,18 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                     );
 
                     if (result != null) {
-                      _pickImage(result == 1);
+                      pickImage(result == 1);
                     }
                   },
-                  child: _imageFile == null
-                      ? const Icon(Icons.image, size: 100, color: Colors.grey)
-                      : Image.file(_imageFile!, height: 100),
+                  child: imageFile == null
+                      ? imageUrl.isEmpty
+                          ? const Icon(Icons.image,
+                              size: 100, color: Colors.grey)
+                          : Image.network(imageUrl,
+                              width: 200, height: 100, fit: BoxFit.cover)
+                      : Image.file(imageFile!,
+                          width: 150, height: 100, fit: BoxFit.cover),
                 ),
-                const Text('Agrega la imagen'),
                 TextField(
                   controller: clientNameController,
                   decoration:
@@ -171,9 +172,8 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                   decoration: const InputDecoration(labelText: 'Anticipo'),
                   keyboardType: TextInputType.number,
                 ),
-                // Dropdown para seleccionar el estado
                 DropdownButton<String>(
-                  value: selectedStatus,
+                  hint: const Text('Seleccione un estado'),
                   onChanged: (String? newValue) {
                     setState(() {
                       selectedStatus = newValue!;
@@ -207,7 +207,7 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                       'Por favor completa todos los campos antes de guardar.');
                   return;
                 }
-                if (_imageFile == null) {
+                if (imageFile == null && imageUrl.isEmpty) {
                   _showAlert('La foto es obligatoria para guardar el trabajo.');
                   return;
                 }
@@ -221,6 +221,15 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                       'Los campos de anticipo y costo deben ser números.');
                   return;
                 }
+                if (imageFile == null && imageUrl.isEmpty) {
+                  _showAlert('Por favor selecciona una imagen.');
+                  return;
+                }
+
+                // Subir imagen si se seleccionó una nueva
+                if (imageFile != null) {
+                  imageUrl = await _uploadImageToFirebase(imageFile!);
+                }
 
                 double remaining = serviceCost - advance;
                 final dateKey =
@@ -228,7 +237,10 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                 String createdDate =
                     DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-                String imagePath = _imageFile!.path;
+                // Si se ha seleccionado una nueva imagen, subirla
+                if (imageFile != null) {
+                  imageUrl = await _uploadImageToFirebase(imageFile!);
+                }
 
                 Job newJob = Job(
                   id: job?.id ?? '',
@@ -238,11 +250,10 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                   advance: advance,
                   service_cost: serviceCost,
                   remaining: remaining,
-                  review_date:
-                      dateKey, // Usamos 'review_date' como la fecha a mostrar
-                  photo: imagePath, // Foto obligatoria
-                  received_date: createdDate, // Fecha de creación
-                  status: selectedStatus, // Estado
+                  review_date: dateKey,
+                  photo: imageUrl, // Guardamos la URL de la imagen
+                  received_date: createdDate,
+                  status: selectedStatus,
                 );
 
                 try {
@@ -257,7 +268,6 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                         .update(newJob.toMap());
                   }
 
-                  // Mostrar alerta después de guardar
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _showAlert('Trabajo guardado correctamente.');
                   });
@@ -265,7 +275,6 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                   Navigator.of(context).pop();
                   _loadEvents(_selectedDay);
                 } catch (e) {
-                  print("Error al guardar el trabajo: $e");
                   _showAlert('Hubo un error al guardar el trabajo.');
                 }
               },
@@ -274,6 +283,19 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
         );
       },
     );
+  }
+
+  Future<String> _uploadImageToFirebase(File imageFile) async {
+    try {
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      Reference ref = FirebaseStorage.instance.ref().child('images/$fileName');
+      UploadTask uploadTask = ref.putFile(imageFile);
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      return '';
+    }
   }
 
   void _deleteJob(String jobId) async {
@@ -353,14 +375,9 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                         return Card(
                             color: Colors.grey[900],
                             child: ListTile(
-                              leading: trabajo.photo != null
-                                  ? Image.network(
-                                      trabajo
-                                          .photo!, // Usamos la URL de Firebase Storage
-                                      width: 50,
-                                      height: 50,
-                                      fit: BoxFit.cover,
-                                    )
+                              leading: trabajo.photo.isNotEmpty
+                                  ? Image.network(trabajo.photo,
+                                      width: 50, height: 50, fit: BoxFit.cover)
                                   : const Icon(Icons.image,
                                       color: Colors.white),
                               title: Text(

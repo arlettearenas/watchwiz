@@ -29,7 +29,7 @@ class Refaccion {
       caracteristicas: data['caracteristicas'],
       categoria: data['categoria'],
       color: data['color'],
-      existencia: data['existencia'],
+      existencia: (data['existencia'] as num).toDouble(),
       medida: data['medida'],
       precio: data['precio'],
       imagen: data['imagen'],

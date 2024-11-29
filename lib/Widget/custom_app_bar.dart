@@ -11,6 +11,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: Colors.black,
       actions: [
+        Image.asset('assets/images/Logo.png'),
+        Text('WatchWiz',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18)),
+        const SizedBox(width: 140),
         IconButton(
           color: Colors.white,
           icon: Icon(Icons.calendar_today),
