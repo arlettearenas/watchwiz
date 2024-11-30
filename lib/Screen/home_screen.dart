@@ -43,13 +43,35 @@ class _HomeScreenState extends State<HomeScreen> {
     _showRefaccionDialog(refaccion);
   }
 
-  void _deleteRefaccion(String refaccionId) async {
-    await FirebaseFirestore.instance
-        .collection('refacciones')
-        .doc(refaccionId)
-        .delete();
-    _loadRefacciones();
-    _showAlert('Refacción eliminada.');
+  void _deleteRefaccion(String? refaccionId, String? imageUrl) async {
+    try {
+      // Asegúrate de que refaccionId no sea nulo antes de proceder
+      if (refaccionId == null) {
+        _showAlert('El ID de la refacción es nulo y no se puede eliminar.');
+        return;
+      }
+
+      // Si hay una imagen asociada, eliminarla de Firebase Storage
+      if (imageUrl != null) {
+        try {
+          Reference imageRef = FirebaseStorage.instance.refFromURL(imageUrl);
+          await imageRef.delete();
+          print('Imagen eliminada de Firebase Storage');
+        } catch (e) {
+          print("Error al eliminar la imagen: $e");
+        }
+      }
+
+      // Eliminar el documento de Firestore
+      await FirebaseFirestore.instance
+          .collection('refacciones')
+          .doc(refaccionId)
+          .delete();
+      _loadRefacciones();
+      _showAlert('Refacción eliminada.');
+    } catch (e) {
+      _showAlert('Error al eliminar la refacción: $e');
+    }
   }
 
   Future<String?> uploadImage(XFile imageFile) async {
@@ -78,7 +100,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final TextEditingController existenciaController =
         TextEditingController(text: refaccion?.existencia.toString());
     final TextEditingController medidaController =
-        TextEditingController(text: refaccion?.medida);
+        TextEditingController(text: refaccion?.medida.toString());
+    final TextEditingController aceptableController =
+        TextEditingController(text: refaccion?.aceptable.toString());
     final TextEditingController precioController =
         TextEditingController(text: refaccion?.precio.toString());
 
@@ -164,6 +188,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   controller: medidaController,
                   decoration: const InputDecoration(labelText: 'Medida'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: aceptableController,
+                  decoration: const InputDecoration(labelText: 'Aceptable'),
+                  keyboardType: TextInputType.number,
                 ),
                 TextField(
                   controller: precioController,
@@ -186,16 +216,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     colorController.text.isEmpty ||
                     existenciaController.text.isEmpty ||
                     medidaController.text.isEmpty ||
+                    aceptableController.text.isEmpty ||
                     precioController.text.isEmpty) {
                   _showAlert(
                       'Por favor completa todos los campos antes de guardar.');
                   return;
                 }
 
-                double? existencia = double.tryParse(existenciaController.text);
-                double? precio = double.tryParse(precioController.text);
+                int? existencia = int.tryParse(existenciaController.text);
+                int? precio = int.tryParse(precioController.text);
+                int? medida = int.tryParse(medidaController.text);
+                int? aceptable = int.tryParse(aceptableController.text);
 
-                if (existencia == null || precio == null) {
+                if (existencia == null ||
+                    precio == null ||
+                    medida == null ||
+                    aceptable == null) {
                   _showAlert(
                       'Los campos de existencia y precio deben ser números.');
                   return;
@@ -208,7 +244,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     categoria: categoriaController.text,
                     color: colorController.text,
                     existencia: existencia,
-                    medida: medidaController.text,
+                    medida: medida,
+                    aceptable: aceptable,
                     precio: precio,
                     imagen:
                         imageUrl, // Puede ser null si no se seleccionó imagen
@@ -228,7 +265,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     'categoria': categoriaController.text,
                     'color': colorController.text,
                     'existencia': existencia,
-                    'medida': medidaController.text,
+                    'medida': medida,
+                    'aceptable': aceptable,
                     'precio': precio,
                     'imagen': imageUrl,
                   });
@@ -290,6 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       .toList()[index];
 
                   return Card(
+                    margin: const EdgeInsets.only(left: 20),
                     color: const Color.fromARGB(255, 42, 42, 42),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -304,11 +343,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                       false
                                   ? Image.network(
                                       refaccion.imagen!,
-                                      height: 100,
                                       fit: BoxFit.cover,
+                                      height: 115,
                                     ) // Si la imagen es una URL válida
-                                  : Image.file(File(refaccion.imagen!),
-                                      height: 100) // Si es una imagen local
+                                  : Image.file(File(refaccion.imagen!))
                               : const Icon(
                                   Icons.image,
                                   size: 100,
@@ -325,8 +363,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteRefaccion),
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteRefaccion(
+                                refaccion.id, refaccion.imagen),
+                          ),
                         ],
                       ),
                     ),

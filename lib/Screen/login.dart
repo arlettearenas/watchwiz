@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:watchwiz/Screen/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String uid;
+
+  const LoginScreen({super.key, required this.uid});
 
   @override
   // ignore: library_private_types_in_public_api
@@ -15,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword =
+      true; // Variable para controlar la visibilidad de la contraseña
 
   Future<void> _login() async {
     setState(() {
@@ -105,21 +109,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextField(
                           controller: _passwordController,
                           style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: "Contraseña",
-                            labelStyle: TextStyle(color: Colors.white70),
-                            enabledBorder: UnderlineInputBorder(
+                            labelStyle: const TextStyle(color: Colors.white70),
+                            enabledBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.white54),
                             ),
-                            focusedBorder: UnderlineInputBorder(
+                            focusedBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.blue),
                             ),
-                            suffixIcon: Icon(
-                              Icons.visibility,
-                              color: Colors.white54,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: Colors.white54,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
                             ),
                           ),
-                          obscureText: false,
+                          obscureText: _obscurePassword,
                         ),
                       ],
                     ),

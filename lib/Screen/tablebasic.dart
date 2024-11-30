@@ -173,6 +173,7 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                   keyboardType: TextInputType.number,
                 ),
                 DropdownButton<String>(
+                  value: selectedStatus,
                   hint: const Text('Seleccione un estado'),
                   onChanged: (String? newValue) {
                     setState(() {
@@ -221,12 +222,8 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                       'Los campos de anticipo y costo deben ser números.');
                   return;
                 }
-                if (imageFile == null && imageUrl.isEmpty) {
-                  _showAlert('Por favor selecciona una imagen.');
-                  return;
-                }
 
-                // Subir imagen si se seleccionó una nueva
+                // Subir la nueva imagen solo si se seleccionó una imagen nueva
                 if (imageFile != null) {
                   imageUrl = await _uploadImageToFirebase(imageFile!);
                 }
@@ -236,11 +233,6 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                     "${_selectedDay.year}-${_selectedDay.month}-${_selectedDay.day}";
                 String createdDate =
                     DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-                // Si se ha seleccionado una nueva imagen, subirla
-                if (imageFile != null) {
-                  imageUrl = await _uploadImageToFirebase(imageFile!);
-                }
 
                 Job newJob = Job(
                   id: job?.id ?? '',
@@ -272,6 +264,7 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                     _showAlert('Trabajo guardado correctamente.');
                   });
 
+                  // ignore: use_build_context_synchronously
                   Navigator.of(context).pop();
                   _loadEvents(_selectedDay);
                 } catch (e) {
@@ -298,10 +291,28 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
     }
   }
 
-  void _deleteJob(String jobId) async {
-    await FirebaseFirestore.instance.collection('trabajos').doc(jobId).delete();
-    _loadEvents(_selectedDay);
-    _showAlert('Trabajo eliminado.');
+  void _deleteJob(String jobId, String imageUrl) async {
+    try {
+      // Si existe una URL de imagen, eliminarla del almacenamiento de Firebase
+      if (imageUrl.isNotEmpty) {
+        Reference imageRef = FirebaseStorage.instance.refFromURL(imageUrl);
+        await imageRef.delete(); // Borra la imagen
+      }
+
+      // Eliminar el trabajo de Firestore
+      await FirebaseFirestore.instance
+          .collection('trabajos')
+          .doc(jobId)
+          .delete();
+
+      // Recargar los trabajos para actualizar la vista
+      _loadEvents(_selectedDay);
+
+      // Mostrar un mensaje de éxito
+      _showAlert('Trabajo eliminado correctamente.');
+    } catch (e) {
+      _showAlert('Hubo un error al eliminar el trabajo.');
+    }
   }
 
   @override
@@ -399,7 +410,8 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                                     IconButton(
                                       icon: const Icon(Icons.delete,
                                           color: Colors.red),
-                                      onPressed: () => _deleteJob(trabajo.id),
+                                      onPressed: () =>
+                                          _deleteJob(trabajo.id, trabajo.photo),
                                     ),
                                   ]),
                             ));
