@@ -29,7 +29,8 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
   }
 
   void _loadEvents(DateTime date) async {
-    String dateKey = "${date.year}-${date.month}-${date.day}";
+    String dateKey =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('trabajos')
@@ -226,6 +227,10 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                 // Subir la nueva imagen solo si se seleccionó una imagen nueva
                 if (imageFile != null) {
                   imageUrl = await _uploadImageToFirebase(imageFile!);
+                  if (imageUrl.isEmpty) {
+                    _showAlert('No se pudo subir la imagen, intenta de nuevo.');
+                    return;
+                  }
                 }
 
                 double remaining = serviceCost - advance;
@@ -341,12 +346,11 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                 });
               },
               eventLoader: (day) {
-                // Filtra los trabajos por fecha
+                String formattedDay =
+                    "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
                 return _trabajos
-                    .where((job) =>
-                        job.review_date ==
-                        "${day.year}-${day.month}-${day.day}")
-                    .map((e) => e.client_name) // Muestra el nombre del cliente
+                    .where((job) => job.review_date == formattedDay)
+                    .map((e) => e.client_name)
                     .toList();
               },
               calendarStyle: const CalendarStyle(
@@ -372,25 +376,58 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: _trabajos.isEmpty
-                  ? const Center(
-                      child: Text(
-                        "No hay trabajos para este día",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _trabajos.length,
-                      itemBuilder: (context, index) {
-                        final trabajo = _trabajos[index];
-                        return Card(
+                child: _trabajos.isEmpty
+                    ? const Center(
+                        child: Text(
+                          "No hay trabajos para este día",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _trabajos.length,
+                        itemBuilder: (context, index) {
+                          final trabajo = _trabajos[index];
+                          return Card(
                             color: Colors.grey[900],
                             child: ListTile(
-                              leading: trabajo.photo.isNotEmpty
-                                  ? Image.network(trabajo.photo,
-                                      width: 50, height: 50, fit: BoxFit.cover)
-                                  : const Icon(Icons.image,
-                                      color: Colors.white),
+                              leading: GestureDetector(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => Dialog(
+                                      child: InteractiveViewer(
+                                        child: trabajo.photo.isNotEmpty
+                                            ? Image.network(
+                                                trabajo.photo,
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return const Icon(
+                                                      Icons.broken_image,
+                                                      size: 100);
+                                                },
+                                              )
+                                            : const Icon(Icons.image,
+                                                size: 100, color: Colors.grey),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: trabajo.photo.isNotEmpty
+                                    ? Image.network(
+                                        trabajo.photo,
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return const Icon(Icons.broken_image,
+                                              size: 50);
+                                        },
+                                      )
+                                    : const Icon(Icons.image,
+                                        size: 50, color: Colors.grey),
+                              ),
                               title: Text(
                                 trabajo.client_name,
                                 style: const TextStyle(color: Colors.white),
@@ -400,24 +437,25 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
                                 style: const TextStyle(color: Colors.white70),
                               ),
                               trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit,
-                                          color: Colors.blue),
-                                      onPressed: () => _editJob(trabajo),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete,
-                                          color: Colors.red),
-                                      onPressed: () =>
-                                          _deleteJob(trabajo.id, trabajo.photo),
-                                    ),
-                                  ]),
-                            ));
-                      },
-                    ),
-            ),
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit,
+                                        color: Colors.blue),
+                                    onPressed: () => _editJob(trabajo),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red),
+                                    onPressed: () =>
+                                        _deleteJob(trabajo.id, trabajo.photo),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      )),
           ],
         ),
         floatingActionButton: FloatingActionButton(

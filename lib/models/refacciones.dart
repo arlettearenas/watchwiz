@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Refaccion {
   final String? id;
+  final String nombre;
   final String caracteristicas;
   final String categoria;
   final String color;
@@ -13,6 +14,7 @@ class Refaccion {
 
   Refaccion({
     this.id,
+    required this.nombre,
     required this.caracteristicas,
     required this.categoria,
     required this.color,
@@ -29,6 +31,7 @@ class Refaccion {
 
     return Refaccion(
       id: doc.id,
+      nombre: data['nombre'] ?? 'Sin nombre',
       caracteristicas: data['caracteristicas'] ?? '',
       categoria: data['categoria'] ?? '',
       color: data['color'] ?? '',
@@ -37,7 +40,7 @@ class Refaccion {
           : data['existencia'] as int,
       medida: (data['medida'] is double)
           ? (data['medida'] as double).toInt()
-          : data['medida'] as int,
+          : int.tryParse(data['medida'].toString()) ?? 0,
       aceptable: (data['aceptable'] is double)
           ? (data['aceptable'] as double).toInt()
           : data['aceptable'] as int,
@@ -51,6 +54,7 @@ class Refaccion {
   // Método para convertir un objeto Refaccion a un mapa para guardar en Firestore
   Map<String, dynamic> toMap() {
     return {
+      'nombre': nombre,
       'caracteristicas': caracteristicas,
       'categoria': categoria,
       'color': color,

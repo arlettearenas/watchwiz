@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:watchwiz/Widget/custom_app_bar.dart';
 import 'package:watchwiz/Widget/custom_bottom_nav.dart';
+import 'package:watchwiz/Widget/search_bar.dart';
 import 'package:watchwiz/models/refacciones.dart';
 
 class ComprasScreen extends StatefulWidget {
@@ -14,6 +15,7 @@ class ComprasScreen extends StatefulWidget {
 class _ComprasScreenState extends State<ComprasScreen> {
   List<Refaccion> _refaccionesParaComprar = [];
   Map<String, bool> _seleccionados = {};
+  String searchText = '';
 
   @override
   void initState() {
@@ -52,17 +54,14 @@ class _ComprasScreenState extends State<ComprasScreen> {
       body: Column(
         children: [
           const SizedBox(height: 20),
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(
-              'Refacciones para comprar',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          CustomSearchBar(
+            onChanged: (value) {
+              setState(() {
+                searchText = value.toLowerCase();
+              });
+            },
           ),
+          const SizedBox(height: 20),
           Expanded(
             child: ListView.builder(
               itemCount: _refaccionesParaComprar.length,

@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
+import 'package:watchwiz/Screen/notifications.dart';
 import 'package:watchwiz/Screen/tablebasic.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -31,7 +32,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           color: Colors.white,
           icon: Icon(Icons.notifications),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => NotificationsScreen()),
+            );
+          },
         ),
       ],
     );

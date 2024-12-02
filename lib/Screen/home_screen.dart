@@ -91,6 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showRefaccionDialog(Refaccion? refaccion) {
+    final TextEditingController nombreController =
+        TextEditingController(text: refaccion?.nombre);
     final TextEditingController caracteristicasController =
         TextEditingController(text: refaccion?.caracteristicas);
     final TextEditingController categoriaController =
@@ -114,10 +116,11 @@ class _HomeScreenState extends State<HomeScreen> {
           source: fromCamera ? ImageSource.camera : ImageSource.gallery);
 
       if (image != null) {
+        // Sube la imagen a Firebase Storage
         final uploadedUrl = await uploadImage(image);
         if (uploadedUrl != null) {
           setState(() {
-            imageUrl = uploadedUrl; // Actualiza la URL con la nueva imagen
+            imageUrl = uploadedUrl; // Actualiza la URL con la imagen subida
           });
         } else {
           _showAlert('Error al subir la imagen.');
@@ -168,6 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       : Image.network(imageUrl!, height: 100),
                 ),
                 TextField(
+                  controller: nombreController,
+                  decoration:
+                      const InputDecoration(labelText: 'Nombre de la pieza'),
+                ),
+                TextField(
                   controller: caracteristicasController,
                   decoration:
                       const InputDecoration(labelText: 'Características'),
@@ -211,7 +219,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               child: const Text('Guardar'),
               onPressed: () async {
-                if (caracteristicasController.text.isEmpty ||
+                if (nombreController.text.isEmpty ||
+                    caracteristicasController.text.isEmpty ||
                     categoriaController.text.isEmpty ||
                     colorController.text.isEmpty ||
                     existenciaController.text.isEmpty ||
@@ -233,26 +242,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     medida == null ||
                     aceptable == null) {
                   _showAlert(
-                      'Los campos de existencia y precio deben ser números.');
+                      'Los campos de existencia, medida y precio deben ser números.');
                   return;
                 }
 
                 if (refaccion == null) {
                   // Nueva refacción
-                  Refaccion newRefaccion = Refaccion(
-                    caracteristicas: caracteristicasController.text,
-                    categoria: categoriaController.text,
-                    color: colorController.text,
-                    existencia: existencia,
-                    medida: medida,
-                    aceptable: aceptable,
-                    precio: precio,
-                    imagen:
-                        imageUrl, // Puede ser null si no se seleccionó imagen
-                  );
                   await FirebaseFirestore.instance
                       .collection('refacciones')
-                      .add(newRefaccion.toMap());
+                      .add({
+                    'nombre': nombreController.text,
+                    'caracteristicas': caracteristicasController.text,
+                    'categoria': categoriaController.text,
+                    'color': colorController.text,
+                    'existencia': existencia,
+                    'medida': medida,
+                    'aceptable': aceptable,
+                    'precio': precio,
+                    'imagen': imageUrl, // URL de la imagen subida
+                  });
                   Navigator.of(context).pop();
                   _showAlert('Refacción agregada correctamente.');
                 } else {
@@ -261,6 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       .collection('refacciones')
                       .doc(refaccion.id)
                       .update({
+                    'nombre': nombreController.text,
                     'caracteristicas': caracteristicasController.text,
                     'categoria': categoriaController.text,
                     'color': colorController.text,
@@ -268,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'medida': medida,
                     'aceptable': aceptable,
                     'precio': precio,
-                    'imagen': imageUrl,
+                    'imagen': imageUrl, // URL de la imagen subida
                   });
                   Navigator.of(context).pop();
                   _showAlert('Refacción editada correctamente.');
@@ -302,19 +311,21 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
             Expanded(
               child: GridView.builder(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
+                  childAspectRatio:
+                      3 / 4, // Ajusta la proporción para más espacio vertical
                 ),
                 itemCount: _refacciones
                     .where((refaccion) =>
                         refaccion.categoria
                             .toLowerCase()
                             .contains(searchText) ||
-                        refaccion.caracteristicas
-                            .toLowerCase()
-                            .contains(searchText))
+                        refaccion.nombre.toLowerCase().contains(searchText))
                     .length,
                 itemBuilder: (context, index) {
                   final refaccion = _refacciones
@@ -322,44 +333,63 @@ class _HomeScreenState extends State<HomeScreen> {
                           refaccion.categoria
                               .toLowerCase()
                               .contains(searchText) ||
-                          refaccion.caracteristicas
-                              .toLowerCase()
-                              .contains(searchText))
+                          refaccion.nombre.toLowerCase().contains(searchText))
                       .toList()[index];
 
                   return Card(
-                    margin: const EdgeInsets.only(left: 20),
-                    color: const Color.fromARGB(255, 42, 42, 42),
+                    elevation: 5, // Sombra para destacar la tarjeta
+                    color: const Color.fromARGB(255, 50, 50, 50),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(15),
                     ),
                     child: InkWell(
+                      borderRadius: BorderRadius.circular(15),
                       onTap: () => _editRefaccion(refaccion),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          refaccion.imagen != null
-                              ? Uri.tryParse(refaccion.imagen!)?.isAbsolute ??
-                                      false
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(15),
+                              ),
+                              child: refaccion.imagen != null
                                   ? Image.network(
                                       refaccion.imagen!,
                                       fit: BoxFit.cover,
-                                      height: 115,
-                                    ) // Si la imagen es una URL válida
-                                  : Image.file(File(refaccion.imagen!))
-                              : const Icon(
-                                  Icons.image,
-                                  size: 100,
-                                  color: Colors.grey,
-                                ),
+                                      width: double.infinity,
+                                    )
+                                  : const Icon(
+                                      Icons.image,
+                                      size: 100,
+                                      color: Colors.grey,
+                                    ),
+                            ),
+                          ),
                           Padding(
                             padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              refaccion.categoria,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  refaccion.nombre,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                  overflow: TextOverflow.fade,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  refaccion.categoria,
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                           IconButton(

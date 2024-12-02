@@ -146,7 +146,7 @@ class _TrabajosScreenState extends State<TrabajosScreen> {
                                   'Para los siguientes días')
                               .toList()),
                       _buildJobSection(
-                          'Pasado',
+                          'Trabajos atrasados',
                           getFilteredJobs()
                               .where((job) =>
                                   getJobStatus(job.review_date) == 'Pasado')

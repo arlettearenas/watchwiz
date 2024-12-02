@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:watchwiz/Screen/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  final String uid;
-
-  const LoginScreen({super.key, required this.uid});
+  const LoginScreen({super.key});
 
   @override
   // ignore: library_private_types_in_public_api
